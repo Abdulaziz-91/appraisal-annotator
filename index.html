@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Appraisal Annotator</title>
+<style>
+:root{
+  --bg:#e9edf1; --panel:#ffffff; --panel2:#f4f6f8; --ink:#1b2430; --muted:#66727f; --line:#d3dae1;
+  --accent:#1f4160; --accent-ink:#ffffff; --danger:#b3261e; --ok:#2b7a4b;
+  --serif:Cambria, Georgia, "Times New Roman", serif;
+  --sans:"Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#12171d; --panel:#1b222b; --panel2:#222b36; --ink:#e6ebf0; --muted:#8e9baa; --line:#323d4a;
+    --accent:#8db8e0; --accent-ink:#0f1720; --danger:#f2918a; --ok:#7cc79b;}
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;display:flex;flex-direction:column}
+button,select,input,textarea{font:inherit;color:inherit}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,.seg:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{display:flex;align-items:center;gap:12px;padding:10px 18px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-family:var(--serif);font-size:20px;margin:0 auto 0 0;font-weight:700;letter-spacing:.2px}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn.danger{color:var(--danger)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.small{padding:3px 9px;font-size:12.5px}
+main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;padding:14px 18px}
+@media (max-width:920px){main{grid-template-columns:1fr;overflow:auto}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;min-height:0}
+.card-head{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tabs{display:flex;gap:2px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:2px}
+.tab{border:0;background:transparent;padding:4px 12px;border-radius:5px;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.spacer{margin-left:auto}
+.status{font-size:12.5px;color:var(--muted)}
+.status.err{color:var(--danger)}
+.legend{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line)}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:2px 10px 2px 6px;cursor:pointer;background:var(--panel);font-size:12.5px}
+.chip i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.chip.off{opacity:.45;text-decoration:line-through}
+.chip b{font-weight:600;color:var(--muted);margin-left:2px}
+.textwrap{flex:1;min-height:0;overflow:auto;padding:18px 26px 40px}
+#view,#editor{font-family:var(--serif);font-size:18px;line-height:2;white-space:pre-wrap;max-width:74ch;margin:0 auto;word-wrap:break-word}
+#editor{width:100%;height:100%;min-height:360px;border:1px dashed var(--line);border-radius:6px;padding:12px;background:var(--panel);resize:none}
+.seg{border-radius:2px}
+.seg.has{cursor:pointer}
+.seg.sel{outline:2px solid var(--ink);outline-offset:-1px}
+.empty{color:var(--muted);font-family:var(--sans);font-size:14px;text-align:center;padding:40px 0}
+aside{display:flex;flex-direction:column;gap:14px;min-height:0;overflow:auto}
+.panel-title{font-weight:600;margin:0}
+.body{padding:10px 12px}
+.field{display:grid;grid-template-columns:84px 1fr;gap:8px;align-items:center;margin-bottom:8px}
+.field label{color:var(--muted);font-size:12.5px}
+.field select,.field input,.field textarea{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:5px 8px}
+.field textarea{resize:vertical;min-height:54px}
+.spanbox{font-family:var(--serif);font-size:15px;padding:6px 10px;border-left:4px solid var(--accent);background:var(--panel2);border-radius:0 5px 5px 0;margin-bottom:10px;word-break:break-word}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.list{overflow:auto;max-height:300px}
+.item{display:grid;grid-template-columns:10px 1fr auto;gap:8px;align-items:start;padding:7px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+.item:hover{background:var(--panel2)}
+.item.sel{background:var(--panel2);box-shadow:inset 3px 0 0 var(--accent)}
+.dot{width:10px;height:10px;border-radius:3px;margin-top:5px}
+.item .t{font-family:var(--serif);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .m{font-size:12px;color:var(--muted)}
+.badge{font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 5px;color:var(--muted)}
+.badge.pending{border-color:var(--accent);color:var(--accent)}
+#toolbar{position:fixed;display:none;z-index:20;background:var(--ink);padding:5px;border-radius:8px;gap:4px;box-shadow:0 6px 24px rgba(0,0,0,.3);flex-wrap:wrap;max-width:360px}
+#toolbar button{border:0;border-radius:5px;padding:4px 9px;cursor:pointer;color:#fff;font-size:12.5px;font-weight:600}
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);padding:0;width:min(680px,94vw)}
+dialog::backdrop{background:rgba(10,15,20,.5)}
+dialog .dh{padding:12px 16px;border-bottom:1px solid var(--line);font-weight:600;font-size:15px}
+dialog .db{padding:14px 16px;max-height:70vh;overflow:auto}
+dialog .df{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+dialog textarea{width:100%;min-height:260px;font-family:Consolas,monospace;font-size:12.5px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:8px}
+dialog input[type=text],dialog input[type=password]{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:6px 8px;margin:4px 0 12px}
+dialog label{font-size:12.5px;color:var(--muted)}
+.note{font-size:12.5px;color:var(--muted);margin:0 0 12px}
+table.res{border-collapse:collapse;width:100%}
+table.res td,table.res th{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left}
+table.res td:last-child,table.res th:last-child{text-align:right;font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:no-preference){.btn{transition:border-color .15s}}
+.scope{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);font-size:13px;background:var(--panel2)}
+.scope label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.scope .scope-l{font-weight:600;color:var(--muted)}
+.scope select{background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:2px 6px}
+.scope [hidden]{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Appraisal Annotator</h1>
+  <button class="btn" id="btnOpen">Open text file</button>
+  <button class="btn" id="btnImport">Import JSON</button>
+  <button class="btn" id="btnExportJson">Export JSON</button>
+  <button class="btn" id="btnExportCsv">Export CSV</button>
+  <button class="btn" id="btnCompare">Compare with gold</button>
+  <button class="btn" id="btnSettings">Settings</button>
+  <input type="file" id="fileText" accept=".txt,.md,text/plain" hidden>
+  <input type="file" id="fileJson" accept=".json,application/json" hidden>
+</header>
+
+<main>
+  <section class="card">
+    <div class="card-head">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tabEdit" aria-selected="true">Edit text</button>
+        <button class="tab" role="tab" id="tabAnn" aria-selected="false">Annotate</button>
+      </div>
+      <button class="btn" id="btnRules" title="Fast and private: runs in this browser, nothing is sent anywhere">Auto-annotate offline (rules)</button>
+  <button class="btn primary" id="btnAuto">Auto-annotate with Claude</button>
+      <span class="status" id="status"></span>
+      <span class="spacer status" id="stats"></span>
+    </div>
+    <div class="scope" id="scope">
+      <span class="scope-l">Annotate</span>
+      <label><input type="checkbox" id="scAtt"> Attitude</label>
+      <label><input type="checkbox" id="scEng"> Engagement</label>
+      <label id="engTypeWrap" title="Heteroglossia: the text opens or closes space for other voices (contract, expand). Monoglossia: bare assertions with no engagement marker.">as
+        <select id="scEngType">
+          <option value="both">heteroglossia + monoglossia</option>
+          <option value="hetero">heteroglossia only (contract, expand)</option>
+          <option value="mono">monoglossia only (bare assertions)</option>
+        </select></label>
+      <label><input type="checkbox" id="scGrad"> Graduation</label>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="textwrap" id="textwrap">
+      <textarea id="editor" placeholder="Paste or type the text to analyse here, or open a .txt file. Then switch to Annotate." spellcheck="false"></textarea>
+      <div id="view" hidden></div>
+    </div>
+  </section>
+
+  <aside>
+    <section class="card" id="detailCard">
+      <div class="card-head"><h2 class="panel-title" style="font-size:14px">Selected annotation</h2></div>
+      <div class="body" id="detail"></div>
+    </section>
+    <section class="card">
+      <div class="card-head">
+        <h2 class="panel-title" style="font-size:14px">All annotations</h2>
+        <span class="spacer"></span>
+        <button class="btn small" id="btnAcceptAll">Accept all pending</button>
+        <button class="btn small danger" id="btnClearPending">Discard pending</button>
+      </div>
+      <div class="list" id="list"></div>
+    </section>
+  </aside>
+</main>
+
+<div id="toolbar" role="toolbar" aria-label="Label selected text"></div>
+
+<dialog id="dlgSettings">
+  <div class="dh">Settings</div>
+  <div class="db">
+    <p class="note">Your API key is stored only in this browser on this computer and is sent only to api.anthropic.com. Manual annotation works without a key.</p>
+    <label for="setKey">Anthropic API key</label>
+    <input type="password" id="setKey" autocomplete="off" placeholder="sk-ant-...">
+    <label for="setModel">Model</label>
+    <input type="text" id="setModel">
+    <label for="setPrompt">Annotation guidelines (system prompt)</label>
+    <textarea id="setPrompt"></textarea>
+  </div>
+  <div class="df">
+    <button class="btn" id="btnResetPrompt">Reset guidelines</button>
+    <button class="btn" id="btnCancelSettings">Cancel</button>
+    <button class="btn primary" id="btnSaveSettings">Save</button>
+  </div>
+</dialog>
+
+<dialog id="dlgCompare">
+  <div class="dh">Compare with gold annotations</div>
+  <div class="db">
+    <p class="note">Load a JSON file exported from this tool (your hand-annotated gold set, for the same text). It is compared with the annotations currently shown, which may include pending ones.</p>
+    <input type="file" id="fileGold" accept=".json,application/json">
+    <div id="compareOut" style="margin-top:14px"></div>
+  </div>
+  <div class="df"><button class="btn" id="btnCloseCompare">Close</button></div>
+</dialog>
+
+<script>
+"use strict";
+/* ---------- Taxonomy ---------- */
+const CATS = {
+  affect:       {label:'Affect',       group:'Attitude',   color:'#d6456f', att:true,  subs:['happiness','security','satisfaction','inclination']},
+  judgment:     {label:'Judgment',     group:'Attitude',   color:'#e0912b', att:true,  subs:['normality','capacity','tenacity','veracity','propriety']},
+  appreciation: {label:'Appreciation', group:'Attitude',   color:'#1f9d8b', att:true,  subs:['reaction','composition','valuation']},
+  contract:     {label:'Contract',     group:'Engagement', color:'#4b5fd1', att:false, subs:['deny','counter','concur','pronounce','endorse']},
+  expand:       {label:'Expand',       group:'Engagement', color:'#9a4fc7', att:false, subs:['entertain','acknowledge','distance']},
+  monogloss:    {label:'Monogloss',    group:'Engagement', color:'#8c6b5a', att:false, subs:[]},
+  force:        {label:'Force',        group:'Graduation', color:'#4f9a3c', att:false, subs:['raise','lower']},
+  focus:        {label:'Focus',        group:'Graduation', color:'#5f7488', att:false, subs:['sharpen','soften']}
+};
+const CAT_KEYS = Object.keys(CATS);
+
+const DEFAULT_PROMPT = `You are an expert discourse analyst annotating texts with Martin & White's APPRAISAL framework (The Language of Evaluation, 2005).
+
+Identify every instance of the following and return them as a JSON array.
+
+ATTITUDE (feelings and evaluations)
+- affect: emotional reactions. subtype: happiness | security | satisfaction | inclination
+- judgment: evaluation of people's behaviour. subtype: normality | capacity | tenacity | veracity | propriety
+- appreciation: evaluation of things, texts and phenomena. subtype: reaction | composition | valuation
+For attitude, also set polarity (positive | negative), mode (inscribed = explicit evaluative wording; invoked = evaluation implied by ideational content), appraiser (who evaluates; "author" if the writer) and target (what is evaluated, as a short phrase).
+
+ENGAGEMENT (positioning relative to other voices)
+- contract: closes down dialogic space. subtype: deny | counter | concur | pronounce | endorse
+- expand: opens up dialogic space. subtype: entertain | acknowledge | distance
+
+GRADUATION (scaling)
+- force: intensity or amount. subtype: raise | lower
+- focus: prototypicality. subtype: sharpen | soften
+
+Rules:
+1. "span" must be copied EXACTLY, character for character, from the text, and be as short as possible while covering the expression.
+2. If the same span string occurs several times, give "occurrence" (1-based) for the instance you mean; otherwise use 1.
+3. Spans may overlap: annotate a graduation or engagement item separately from the attitude it modifies.
+4. Be conservative with invoked attitude. Mark it only when the evaluation is reasonably clear, and set mode to "invoked".
+5. "note": one short sentence of justification.
+6. Do not annotate purely ideational content that has no evaluative or dialogic function.
+
+Return ONLY a JSON array, with no commentary and no markdown fences. Each element:
+{"span":"...","occurrence":1,"category":"...","subtype":"...","polarity":"positive|negative|null","mode":"inscribed|invoked|null","appraiser":"...","target":"...","note":"..."}
+Use null for polarity, mode, appraiser and target on engagement and graduation items.`;
+
+/* ---------- State ---------- */
+let settings = {key:'', model:'claude-sonnet-4-6', prompt:DEFAULT_PROMPT};
+let state = {text:'', anns:[], selected:null, mode:'edit', hidden:new Set()};
+let nextId = 1;
+let pendingSel = null;
+let cycle = {key:'', i:0};
+
+const $ = s => document.querySelector(s);
+function el(tag, props = {}, ...kids){
+  const e = document.createElement(tag);
+  for(const [k,v] of Object.entries(props)){
+    if(k==='class') e.className = v;
+    else if(k==='style') e.style.cssText = v;
+    else if(k==='dataset') Object.assign(e.dataset, v);
+    else if(k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for(const kid of kids.flat()){ if(kid==null) continue; e.append(kid.nodeType ? kid : document.createTextNode(kid)); }
+  return e;
+}
+const byId = id => state.anns.find(a => a.id === id);
+
+/* ---------- Persistence ---------- */
+function loadSettings(){
+  try{ const s = JSON.parse(localStorage.getItem('aa_settings') || '{}'); settings = {...settings, ...s}; }catch(e){}
+  try{
+    const p = JSON.parse(localStorage.getItem('aa_project') || 'null');
+    if(p && typeof p.text === 'string'){ state.text = p.text; state.anns = Array.isArray(p.anns) ? p.anns : []; nextId = 1 + Math.max(0, ...state.anns.map(a => a.id)); }
+  }catch(e){}
+}
+function saveSettings(){ try{ localStorage.setItem('aa_settings', JSON.stringify(settings)); }catch(e){} }
+function saveProject(){ try{ localStorage.setItem('aa_project', JSON.stringify({text:state.text, anns:state.anns})); }catch(e){} }
+function setStatus(msg, err = false){ const s = $('#status'); s.textContent = msg; s.classList.toggle('err', err); }
+
+/* ---------- Rendering: text ---------- */
+function renderView(){
+  const v = $('#view'); v.replaceChildren();
+  const text = state.text;
+  if(!text){ v.append(el('p', {class:'empty'}, 'No text yet. Switch to Edit text, paste your text, then come back here.')); return; }
+  const vis = state.anns.filter(a => !state.hidden.has(a.category));
+  const pts = new Set([0, text.length]);
+  vis.forEach(a => { pts.add(a.start); pts.add(a.end); });
+  const P = [...pts].sort((x, y) => x - y);
+  for(let i = 0; i < P.length - 1; i++){
+    const s = P[i], e = P[i+1];
+    const act = vis.filter(a => a.start <= s && a.end >= e);
+    const seg = el('span', {class:'seg', dataset:{start:s}}, text.slice(s, e));
+    if(act.length){
+      seg.classList.add('has');
+      seg.dataset.ids = act.map(a => a.id).join(',');
+      const atts = act.filter(a => CATS[a.category].att);
+      const oth = act.filter(a => !CATS[a.category].att);
+      if(atts.length){
+        const a0 = atts[0];
+        seg.style.background = CATS[a0.category].color + (a0.status === 'pending' ? '2e' : '55');
+      }
+      const sh = [];
+      oth.forEach((a, k) => sh.push(`inset 0 -${(k+1)*3}px 0 0 ${CATS[a.category].color}`));
+      atts.slice(1).forEach((a, k) => sh.push(`inset 0 ${(k+1)*3}px 0 0 ${CATS[a.category].color}`));
+      if(sh.length) seg.style.boxShadow = sh.join(',');
+      if(state.selected && act.some(a => a.id === state.selected)) seg.classList.add('sel');
+    }
+    v.append(seg);
+  }
+}
+
+function renderLegend(){
+  const lg = $('#legend'); lg.replaceChildren();
+  for(const k of CAT_KEYS){
+    const c = CATS[k];
+    const n = state.anns.filter(a => a.category === k).length;
+    if(!activeCats().has(k) && !n) continue;
+    lg.append(el('button', {class:'chip' + (state.hidden.has(k) ? ' off' : ''), title:c.group + ': click to show or hide',
+      onclick:() => { state.hidden.has(k) ? state.hidden.delete(k) : state.hidden.add(k); refresh(); }},
+      el('i', {style:'background:' + c.color}), c.label, el('b', {}, String(n))));
+  }
+}
+
+/* ---------- Rendering: sidebar ---------- */
+function polSign(a){ return a.polarity === 'positive' ? '+' : a.polarity === 'negative' ? '\u2212' : ''; }
+function renderList(){
+  const L = $('#list'); L.replaceChildren();
+  const sorted = [...state.anns].sort((a, b) => a.start - b.start || a.end - b.end);
+  if(!sorted.length){ L.append(el('p', {class:'empty'}, 'Nothing annotated yet. Select text and pick a label, or use Auto-annotate.')); return; }
+  for(const a of sorted){
+    const c = CATS[a.category];
+    L.append(el('div', {class:'item' + (a.id === state.selected ? ' sel' : ''), onclick:() => select(a.id, true)},
+      el('span', {class:'dot', style:'background:' + c.color}),
+      el('div', {},
+        el('div', {class:'t'}, '\u201c' + a.text + '\u201d'),
+        el('div', {class:'m'}, [c.label, a.subtype, polSign(a)].filter(Boolean).join(' \u00b7 '))),
+      el('span', {class:'badge' + (a.status === 'pending' ? ' pending' : '')}, badgeText(a))));
+  }
+}
+
+function field(label, ctrl){ return el('div', {class:'field'}, el('label', {}, label), ctrl); }
+function sel(options, value, onchange){
+  const s = el('select', {onchange:e => onchange(e.target.value)});
+  for(const [v, t] of options){ const o = el('option', {value:v}, t); if(v === value) o.selected = true; s.append(o); }
+  return s;
+}
+function renderDetail(){
+  const D = $('#detail'); D.replaceChildren();
+  const a = byId(state.selected);
+  if(!a){ D.append(el('p', {class:'empty', style:'padding:16px 0'}, 'Click a highlighted passage or a list item to edit its labels.')); return; }
+  const c = CATS[a.category];
+  D.append(el('div', {class:'spanbox', style:'border-left-color:' + c.color}, a.text));
+  D.append(field('Category', sel(CAT_KEYS.map(k => [k, CATS[k].group + ': ' + CATS[k].label]), a.category, v => {
+    a.category = v; if(!CATS[v].subs.includes(a.subtype)) a.subtype = '';
+    if(CATS[v].att){ a.mode = a.mode || 'inscribed'; } else { a.polarity = ''; a.mode = ''; }
+    touch(a);
+  })));
+  D.append(field('Subtype', sel([['', '\u2014'], ...c.subs.map(s => [s, s])], a.subtype, v => { a.subtype = v; touch(a); })));
+  if(c.att){
+    D.append(field('Polarity', sel([['', '\u2014'], ['positive', 'positive'], ['negative', 'negative'], ['neutral', 'neutral / ambivalent']], a.polarity, v => { a.polarity = v; touch(a); })));
+    D.append(field('Mode', sel([['inscribed', 'inscribed (explicit)'], ['invoked', 'invoked (implicit)']], a.mode || 'inscribed', v => { a.mode = v; touch(a); })));
+    D.append(field('Appraiser', el('input', {type:'text', value:a.appraiser || '', onchange:e => { a.appraiser = e.target.value; touch(a, true); }})));
+    D.append(field('Target', el('input', {type:'text', value:a.target || '', onchange:e => { a.target = e.target.value; touch(a, true); }})));
+  }
+  const ta = el('textarea', {onchange:e => { a.note = e.target.value; touch(a, true); }}); ta.value = a.note || '';
+  D.append(field('Note', ta));
+  const row = el('div', {class:'row'});
+  if(a.status === 'pending') row.append(el('button', {class:'btn primary', onclick:() => { a.status = 'accepted'; touch(a); }}, 'Accept'));
+  row.append(el('button', {class:'btn danger', onclick:() => deleteAnn(a.id)}, 'Delete'));
+  D.append(row);
+}
+
+function renderStats(){
+  const n = state.anns.length, p = state.anns.filter(a => a.status === 'pending').length;
+  $('#stats').textContent = n ? `${n} annotation${n === 1 ? '' : 's'}` + (p ? `, ${p} to review` : '') : '';
+}
+function refresh(){ renderLegend(); renderView(); renderList(); renderDetail(); renderStats(); saveProject(); }
+function touch(a, skipRerenderDetail){
+  if(a.source === 'ai' && a.status === 'pending' && !skipRerenderDetail) { /* stays pending until accepted */ }
+  skipRerenderDetail ? (renderList(), renderView(), renderStats(), renderLegend(), saveProject()) : refresh();
+}
+
+/* ---------- Selection / editing ---------- */
+function select(id, scroll){
+  state.selected = id; refresh();
+  if(scroll && id != null){
+    const seg = [...$('#view').querySelectorAll('.seg.sel')][0];
+    if(seg) seg.scrollIntoView({block:'center', behavior:'smooth'});
+  }
+}
+function deleteAnn(id){
+  state.anns = state.anns.filter(a => a.id !== id);
+  if(state.selected === id) state.selected = null;
+  refresh();
+}
+function addAnn(start, end, category, extra = {}){
+  const c = CATS[category];
+  const a = Object.assign({id:nextId++, start, end, text:state.text.slice(start, end), category, subtype:'',
+    polarity:'', mode:c.att ? 'inscribed' : '', appraiser:'', target:'', note:'', source:'manual', status:'accepted'}, extra);
+  state.anns.push(a);
+  return a;
+}
+
+/* Offset from a DOM point inside #view */
+function offsetFrom(node, off){
+  const v = $('#view');
+  if(node === v){ const ch = v.childNodes[off]; return ch ? +ch.dataset.start : state.text.length; }
+  const seg = (node.nodeType === 3 ? node.parentElement : node).closest('[data-start]');
+  if(!seg) return null;
+  const start = +seg.dataset.start;
+  if(node.nodeType === 3) return start + off;
+  return off === 0 ? start : start + seg.textContent.length;
+}
+
+function buildToolbar(){
+  const tb = $('#toolbar'); tb.replaceChildren();
+  for(const k of CAT_KEYS.filter(k => activeCats().has(k))){
+    const b = el('button', {style:'background:' + CATS[k].color, title:CATS[k].group,
+      onmousedown:e => e.preventDefault(),
+      onclick:() => {
+        if(!pendingSel) return;
+        const a = addAnn(pendingSel.start, pendingSel.end, k);
+        pendingSel = null; hideToolbar(); getSelection().removeAllRanges(); select(a.id);
+      }}, CATS[k].label);
+    tb.append(b);
+  }
+}
+function showToolbar(rect){
+  const tb = $('#toolbar');
+  if(!tb.children.length){ setStatus('Turn on a category under "Annotate" to label text.', true); return; }
+  tb.style.display = 'flex';
+  const w = tb.offsetWidth, h = tb.offsetHeight;
+  let x = Math.max(8, Math.min(window.innerWidth - w - 8, rect.left + rect.width / 2 - w / 2));
+  let y = rect.top - h - 8; if(y < 8) y = rect.bottom + 8;
+  tb.style.left = x + 'px'; tb.style.top = y + 'px';
+}
+function hideToolbar(){ $('#toolbar').style.display = 'none'; }
+
+function wireView(){
+  const v = $('#view');
+  v.addEventListener('mouseup', e => {
+    setTimeout(() => {
+      const s = getSelection();
+      if(s && !s.isCollapsed && v.contains(s.anchorNode) && v.contains(s.focusNode)){
+        let a = offsetFrom(s.anchorNode, s.anchorOffset), b = offsetFrom(s.focusNode, s.focusOffset);
+        if(a != null && b != null){
+          if(a > b) [a, b] = [b, a];
+          while(a < b && /\s/.test(state.text[a])) a++;
+          while(b > a && /\s/.test(state.text[b-1])) b--;
+          if(b > a){ pendingSel = {start:a, end:b}; showToolbar(s.getRangeAt(0).getBoundingClientRect()); return; }
+        }
+      }
+      hideToolbar(); pendingSel = null;
+      const seg = e.target.closest && e.target.closest('.seg');
+      if(!seg || !seg.dataset.ids){ if(state.selected != null) select(null); return; }
+      const ids = seg.dataset.ids.split(',').map(Number).sort((x, y) => (byId(x).end - byId(x).start) - (byId(y).end - byId(y).start));
+      const key = seg.dataset.ids;
+      let pick;
+      if(cycle.key === key && ids.includes(state.selected)){ pick = ids[(ids.indexOf(state.selected) + 1) % ids.length]; }
+      else pick = ids[0];
+      cycle.key = key; select(pick);
+    }, 0);
+  });
+}
+
+/* ---------- Mode switching ---------- */
+function setMode(m){
+  const ed = $('#editor'), v = $('#view');
+  if(state.mode === 'edit' && m === 'ann'){
+    const val = ed.value.replace(/\r\n/g, '\n');
+    if(val !== state.text){
+      if(state.anns.length && !confirm('Changing the text removes the existing annotations. Continue?')){ ed.value = state.text; }
+      else { state.text = val; state.anns = []; state.selected = null; }
+    }
+  }
+  state.mode = m;
+  ed.hidden = m !== 'edit'; v.hidden = m !== 'ann';
+  $('#tabEdit').setAttribute('aria-selected', m === 'edit');
+  $('#tabAnn').setAttribute('aria-selected', m === 'ann');
+  hideToolbar(); refresh();
+}
+function loadText(t){
+  state.text = t.replace(/\r\n/g, '\n'); state.anns = []; state.selected = null; $('#editor').value = state.text;
+}
+
+/* ---------- Claude auto-annotation ---------- */
+function parseJSONArray(t){
+  t = t.trim().replace(/^```(?:json)?/i, '').replace(/```\s*$/, '').trim();
+  const a = t.indexOf('['); if(a < 0) throw new Error('The response contained no JSON array.');
+  const b = t.lastIndexOf(']');
+  try{ return JSON.parse(t.slice(a, b + 1)); }
+  catch(e){
+    const c = t.lastIndexOf('}');
+    if(c > a){ try{ return JSON.parse(t.slice(a, c + 1) + ']'); }catch(e2){} }
+    throw new Error('Could not parse the response as JSON.');
+  }
+}
+function findSpan(text, span, occ){
+  if(!span) return -1;
+  let idx = -1, from = 0;
+  for(let i = 0; i < Math.max(1, occ | 0); i++){ idx = text.indexOf(span, from); if(idx < 0) break; from = idx + 1; }
+  if(idx >= 0) return idx;
+  idx = text.indexOf(span); if(idx >= 0) return idx;
+  return text.toLowerCase().indexOf(span.toLowerCase());
+}
+async function runClaude(){
+  if(state.mode === 'edit') setMode('ann');
+  if(!state.text.trim()){ setStatus('Add some text first.', true); return; }
+  if(!activeCats().size){ setStatus('Turn on at least one category under "Annotate".', true); return; }
+  if(!settings.key){ openSettings(); setStatus('Add your API key in Settings.', true); return; }
+  const text = state.text, btn = $('#btnAuto');
+  btn.disabled = true; setStatus('Annotating\u2026 this can take up to a minute.');
+  try{
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'content-type':'application/json', 'x-api-key':settings.key, 'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:settings.model, max_tokens:8192, system:settings.prompt,
+        messages:[{role:'user', content:scopeInstruction() + '\n\nAnnotate the following text.\n\n<text>\n' + text + '\n</text>'}]})
+    });
+    if(!r.ok){ const j = await r.json().catch(() => ({})); throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); }
+    const j = await r.json();
+    const out = (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    const arr = parseJSONArray(out);
+    // replace earlier unreviewed AI output, keep everything else
+    state.anns = state.anns.filter(a => !(a.source === 'ai' && a.status === 'pending'));
+    let added = 0, skipped = 0;
+    for(const it of arr){
+      const cat = String(it.category || '').toLowerCase();
+      if(!CATS[cat]){ skipped++; continue; }
+      if(!activeCats().has(cat)) continue;
+      const i = findSpan(text, String(it.span || ''), it.occurrence);
+      if(i < 0){ skipped++; continue; }
+      const end = i + String(it.span).length;
+      if(state.anns.some(a => a.start === i && a.end === end && a.category === cat)) continue;
+      const sub = String(it.subtype || '').toLowerCase();
+      const pol = String(it.polarity || '').toLowerCase();
+      const mode = String(it.mode || '').toLowerCase();
+      addAnn(i, end, cat, {
+        subtype:CATS[cat].subs.includes(sub) ? sub : '',
+        polarity:CATS[cat].att && ['positive', 'negative', 'neutral'].includes(pol) ? pol : '',
+        mode:CATS[cat].att ? (mode === 'invoked' ? 'invoked' : 'inscribed') : '',
+        appraiser:CATS[cat].att && it.appraiser ? String(it.appraiser) : '',
+        target:CATS[cat].att && it.target ? String(it.target) : '',
+        note:it.note ? String(it.note) : '', source:'ai', status:'pending'
+      });
+      added++;
+    }
+    refresh();
+    let msg = `Added ${added} annotation${added === 1 ? '' : 's'} for review.`;
+    if(skipped) msg += ` ${skipped} could not be matched to the text and were skipped.`;
+    if(j.stop_reason === 'max_tokens') msg += ' Output was cut off; try a shorter text.';
+    setStatus(msg, !!skipped || j.stop_reason === 'max_tokens');
+  }catch(err){
+    setStatus('Error: ' + err.message, true);
+  }finally{ btn.disabled = false; }
+}
+
+/* ---------- Annotation scope ---------- */
+function activeCats(){
+  const sc = settings.scope, out = new Set();
+  if(sc.att) ['affect', 'judgment', 'appreciation'].forEach(k => out.add(k));
+  if(sc.eng){
+    if(sc.engType !== 'mono'){ out.add('contract'); out.add('expand'); }
+    if(sc.engType !== 'hetero') out.add('monogloss');
+  }
+  if(sc.grad){ out.add('force'); out.add('focus'); }
+  return out;
+}
+function syncScopeUI(){
+  const sc = settings.scope;
+  $('#scAtt').checked = sc.att; $('#scEng').checked = sc.eng; $('#scGrad').checked = sc.grad;
+  $('#scEngType').value = sc.engType; $('#engTypeWrap').hidden = !sc.eng;
+}
+function onScope(){
+  settings.scope = {att:$('#scAtt').checked, eng:$('#scEng').checked, grad:$('#scGrad').checked, engType:$('#scEngType').value};
+  $('#engTypeWrap').hidden = !settings.scope.eng;
+  saveSettings(); buildToolbar(); refresh();
+}
+function wireScope(){
+  ['#scAtt', '#scEng', '#scGrad', '#scEngType'].forEach(i => $(i).addEventListener('change', onScope));
+  syncScopeUI();
+}
+function scopeInstruction(){
+  const act = activeCats();
+  let s = 'SCOPE FOR THIS RUN: annotate ONLY these categories: ' + [...act].join(', ') + '. Do not output any other category.';
+  if(act.has('monogloss')) s += ' "monogloss" means a bare assertion that presents a proposition as taken for granted, with no engagement marker acknowledging other voices or alternatives. For monogloss, the span is the whole clause or sentence, the subtype is empty, and it applies only to declarative statements (not questions, headings, or sentences you already marked as contract or expand).';
+  if(act.has('contract') || act.has('expand')) s += ' Heteroglossic engagement (contract and expand) should be annotated wherever the text engages other voices or alternatives.';
+  return s;
+}
+
+/* ---------- Offline rule-based tagger ---------- */
+/* Word and phrase lists. '*' = any ending, '=' = lowercase only. Fast and private, but it cannot read context. */
+const LEX_DEF = [
+  // Engagement: contract
+  ['contract','deny','','not|no|never|cannot|neither|nor|nothing|nobody|none|nowhere'],
+  ['contract','counter','','but|however|yet|although|though|nevertheless|nonetheless|whereas|even so|in contrast|on the other hand|only|merely|despite|in spite of|instead'],
+  ['contract','concur','','of course|naturally|obviously|admittedly|certainly|clearly|undoubtedly|unsurprisingly|as expected|it is clear that'],
+  ['contract','pronounce','','I argue|we argue|I contend|we contend|I maintain|we maintain|I submit|indeed|in fact|it should be noted|it must be stressed|the fact that'],
+  ['contract','endorse','','show that|shows that|showed that|shown that|demonstrate that|demonstrates that|demonstrated that|prove that|proves that|proved that|find that|finds that|found that|point out|points out|pointed out|confirms that|confirmed that'],
+  // Engagement: expand
+  ['expand','entertain','','=may|might|could|perhaps|possibly|possible|probably|probable|likely|unlikely|seems|seem|seemed|appears to|appear to|apparently|arguably|suggest*|tend*|presumably|conceivably|potentially|I think|I believe|we believe|in my view|in my opinion|I suppose'],
+  ['expand','acknowledge','','according to|argues|argued|states|stated|reports|reported|said|says|explains|explained|maintains|maintained|notes that|noted that'],
+  ['expand','distance','','claim*|allege*|purportedly|supposedly|so-called|ostensibly|reportedly|insist*'],
+  // Graduation
+  ['force','raise','','very|extremely|highly|really|deeply|absolutely|completely|totally|utterly|incredibly|significantly|particularly|remarkably|greatly|strongly|hugely|enormously|truly|entirely|fully|a lot'],
+  ['force','lower','','slightly|somewhat|a bit|a little|barely|fairly|rather|marginally|mildly|hardly|to some extent|to a degree|partly|partially'],
+  ['focus','sharpen','','genuine*|real|true|exactly|precisely|perfect*|exact|actual*|authentic'],
+  ['focus','soften','','kind of|sort of|roughly|approximately|more or less|virtually|almost|nearly|relatively|loosely'],
+  // Attitude: affect
+  ['affect','happiness','positive','happy|happily|joy*|delight*|cheer*|glad|love|loved|loves|loving|adore*|enjoy*|thrill*|excit*'],
+  ['affect','happiness','negative','sad|sadly|unhappy|miserable|grief|grieve*|sorrow*|depress*|heartbroken|hate|hated|hates|hating|despis*|resent*|lonely|mourn*'],
+  ['affect','security','positive','confident|reassur*|trust*|comfortable|secure|hopeful|calm'],
+  ['affect','security','negative','afraid|fear*|anxious|anxiety|worried|worry|worrying|nervous|terrified|frighten*|uneasy|alarm*|dread*|panic*'],
+  ['affect','satisfaction','positive','satisfied|proud|impressed|fulfil*|content'],
+  ['affect','satisfaction','negative','angry|anger|annoy*|frustrat*|bored|disappoint*|furious|irritat*|outrag*|disgust*|dissatisf*|upset'],
+  ['affect','inclination','positive','eager|keen|desire*|wish*'],
+  ['affect','inclination','negative','reluctant|unwilling|hesitant'],
+  // Attitude: judgment
+  ['judgment','normality','positive','normal|fortunate|lucky|famous|unique'],
+  ['judgment','normality','negative','strange|odd|unusual|unlucky|eccentric|obscure'],
+  ['judgment','capacity','positive','skilled|skillful|clever|intelligent|capable|competent|talented|gifted|expert|powerful|brilliant|wise'],
+  ['judgment','capacity','negative','incompetent|stupid|foolish|inept|weak|ignorant|helpless|unskilled|naive|clumsy'],
+  ['judgment','tenacity','positive','brave|courageous|determined|dedicated|reliable|loyal|persistent|resilient|tireless'],
+  ['judgment','tenacity','negative','cowardly|lazy|unreliable|disloyal|reckless|careless|timid|indecisive|negligent'],
+  ['judgment','veracity','positive','honest|truthful|sincere|candid|credible'],
+  ['judgment','veracity','negative','dishonest|deceptive|deceit*|lying|liar|mislead*|hypocrit*|fraud*|untruthful|evasive|manipulat*|biased'],
+  ['judgment','propriety','positive','ethical|moral|fair|generous|respectful|virtuous|honourable|honorable|decent|responsible|humble|noble|heroic'],
+  ['judgment','propriety','negative','unethical|immoral|unfair|corrupt|cruel|selfish|greedy|evil|wicked|guilty|irresponsible|arrogant|rude|unjust|abusive|shameful|criminal'],
+  // Attitude: appreciation
+  ['appreciation','reaction','positive','beautiful|wonderful|excellent|great|amazing|fascinating|impressive|remarkable|striking|lovely|superb|stunning|engaging|compelling'],
+  ['appreciation','reaction','negative','ugly|terrible|awful|dreadful|boring|dull|horrible|unpleasant|tedious|bland'],
+  ['appreciation','composition','positive','balanced|coherent|clear|elegant|harmonious|consistent|simple|logical|well-structured|precise'],
+  ['appreciation','composition','negative','confusing|chaotic|convoluted|inconsistent|unclear|muddled|fragmented|messy|disjointed|incoherent|vague'],
+  ['appreciation','valuation','positive','important|significant|useful|effective|valuable|innovative|essential|crucial|beneficial|helpful|robust|rigorous|relevant|original|influential|worthwhile'],
+  ['appreciation','valuation','negative','harmful|useless|worthless|ineffective|dangerous|damaging|flawed|inadequate|insufficient|trivial|irrelevant|problematic|unhelpful|detrimental|poor']
+];
+const RAW_DEF = [
+  ['contract','deny','', "(?<![\\p{L}\\p{N}_])\\p{L}+n['\u2019]t(?![\\p{L}\\p{N}_])"],
+  ['expand','acknowledge','', "\\((?:[A-Z][\\p{L}'\u2019-]+)(?: et al\\.| (?:and|&) [A-Z][\\p{L}'\u2019-]+)?,? \\d{4}[a-z]?\\)"],
+  ['expand','acknowledge','', "[A-Z][\\p{L}-]+(?: et al\\.)? \\(\\d{4}[a-z]?\\)"]
+];
+let RULES = null;
+function buildRules(){
+  const rules = [];
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  for(const [cat, sub, pol, list] of LEX_DEF){
+    for(let w of list.split('|')){
+      let cs = false, stem = false;
+      if(w[0] === '='){ cs = true; w = w.slice(1); }
+      if(w.endsWith('*')){ stem = true; w = w.slice(0, -1); }
+      const body = esc(w).replace(/ /g, '\\s+') + (stem ? '\\p{L}*' : '');
+      rules.push({cat, sub, pol, re:new RegExp('(?<![\\p{L}\\p{N}_])' + body + '(?![\\p{L}\\p{N}_])', cs ? 'gu' : 'giu')});
+    }
+  }
+  for(const [cat, sub, pol, src] of RAW_DEF) rules.push({cat, sub, pol, re:new RegExp(src, 'gu')});
+  return rules;
+}
+function runRules(){
+  if(state.mode === 'edit') setMode('ann');
+  const text = state.text;
+  if(!text.trim()){ setStatus('Add some text first.', true); return; }
+  try{ if(!RULES) RULES = buildRules(); }
+  catch(e){ setStatus('Offline rules are not supported by this browser: ' + e.message, true); return; }
+  const found = [];
+  for(const r of RULES){
+    r.re.lastIndex = 0; let m;
+    while((m = r.re.exec(text))){
+      if(m[0].length === 0){ r.re.lastIndex++; continue; }
+      found.push({start:m.index, end:m.index + m[0].length, cat:r.cat, sub:r.sub, pol:r.pol});
+    }
+  }
+  found.sort((a, b) => (b.end - b.start) - (a.end - a.start) || a.start - b.start);
+  const kept = [];
+  for(const f of found){ if(kept.some(k => k.cat === f.cat && k.start <= f.start && k.end >= f.end)) continue; kept.push(f); }
+  const act = activeCats();
+  if(!act.size){ setStatus('Turn on at least one category under "Annotate".', true); return; }
+  const hetero = kept.filter(f => f.cat === 'contract' || f.cat === 'expand');
+  const cand = kept.filter(f => act.has(f.cat));
+  if(act.has('monogloss')){
+    const re = /[^.!?\n]*\p{L}[^.!?\n]*[.!?]+["'\u201d\u2019)\]]*/gu; let m;
+    while((m = re.exec(text))){
+      let st = m.index; const en = m.index + m[0].length;
+      while(st < en && /\s/.test(text[st])) st++;
+      const sent = text.slice(st, en);
+      if(/\?["'\u201d\u2019)\]]*$/.test(sent) || sent.split(/\s+/).length < 5) continue;
+      if(hetero.some(h => h.start < en && h.end > st)) continue;
+      cand.push({start:st, end:en, cat:'monogloss', sub:'', pol:''});
+    }
+  }
+  state.anns = state.anns.filter(a => !(a.source === 'rule' && a.status === 'pending'));
+  let added = 0;
+  for(const f of cand){
+    if(state.anns.some(a => a.start === f.start && a.end === f.end && a.category === f.cat)) continue;
+    addAnn(f.start, f.end, f.cat, {subtype:f.sub, polarity:CATS[f.cat].att ? f.pol : '', note:f.cat === 'monogloss' ? 'Rule-based guess: no engagement marker found, so this may be a bare assertion. Check it.' : 'Rule-based match; check the context.', source:'rule', status:'pending'});
+    added++;
+  }
+  refresh();
+  setStatus(`Offline rules added ${added} annotation${added === 1 ? '' : 's'} for review. Nothing left your computer.`);
+}
+function badgeText(a){
+  const who = a.source === 'rule' ? 'Rules' : a.source === 'ai' ? 'AI' : '';
+  if(!who) return 'manual';
+  return who + (a.status === 'pending' ? ', to review' : ', accepted');
+}
+
+/* ---------- Import / export ---------- */
+function download(name, data, type){
+  const url = URL.createObjectURL(new Blob([data], {type}));
+  const a = el('a', {href:url, download:name}); document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function exportJson(){
+  download('appraisal-annotations.json', JSON.stringify({tool:'appraisal-annotator', version:1, text:state.text, annotations:state.anns}, null, 2), 'application/json');
+}
+function csvCell(v){ v = String(v == null ? '' : v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+function exportCsv(){
+  const cols = ['id', 'start', 'end', 'text', 'group', 'category', 'subtype', 'polarity', 'mode', 'appraiser', 'target', 'note', 'source', 'status'];
+  const rows = [...state.anns].sort((a, b) => a.start - b.start).map(a => cols.map(c => csvCell(c === 'group' ? CATS[a.category].group : a[c])).join(','));
+  download('appraisal-annotations.csv', '\ufeff' + cols.join(',') + '\r\n' + rows.join('\r\n'), 'text/csv;charset=utf-8');
+}
+function readFile(file){ return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsText(file); }); }
+function sanitize(arr, text){
+  return (Array.isArray(arr) ? arr : []).filter(a => CATS[a.category] && Number.isInteger(a.start) && Number.isInteger(a.end) && a.end > a.start && a.end <= text.length)
+    .map(a => ({id:0, start:a.start, end:a.end, text:text.slice(a.start, a.end), category:a.category, subtype:a.subtype || '', polarity:a.polarity || '',
+      mode:a.mode || '', appraiser:a.appraiser || '', target:a.target || '', note:a.note || '', source:a.source || 'manual', status:a.status || 'accepted'}));
+}
+
+/* ---------- Comparison with gold ---------- */
+function compare(gold, pred){
+  const pairs = [];
+  gold.forEach((g, i) => pred.forEach((p, j) => {
+    const ov = Math.min(g.end, p.end) - Math.max(g.start, p.start);
+    if(ov > 0){ const uni = Math.max(g.end, p.end) - Math.min(g.start, p.start); pairs.push({i, j, iou:ov / uni}); }
+  }));
+  pairs.sort((a, b) => b.iou - a.iou);
+  const gu = new Set(), pu = new Set(), m = [];
+  for(const p of pairs){ if(gu.has(p.i) || pu.has(p.j)) continue; gu.add(p.i); pu.add(p.j); m.push(p); }
+  const prf = n => { const P = pred.length ? n / pred.length : 0, R = gold.length ? n / gold.length : 0; return {P, R, F:P + R ? 2 * P * R / (P + R) : 0}; };
+  const relaxed = prf(m.length);
+  const exact = prf(m.filter(x => x.iou === 1).length);
+  const good = m.filter(x => gold[x.i].category === pred[x.j].category);
+  const labelled = prf(good.length);
+  const N = m.length;
+  let acc = 0, kappa = NaN, polAcc = NaN;
+  if(N){
+    acc = good.length / N;
+    const ga = {}, pa = {};
+    m.forEach(x => { ga[gold[x.i].category] = (ga[gold[x.i].category] || 0) + 1; pa[pred[x.j].category] = (pa[pred[x.j].category] || 0) + 1; });
+    let pe = 0; for(const k of CAT_KEYS) pe += ((ga[k] || 0) / N) * ((pa[k] || 0) / N);
+    kappa = pe === 1 ? 1 : (acc - pe) / (1 - pe);
+    const att = m.filter(x => CATS[gold[x.i].category].att && CATS[pred[x.j].category].att && gold[x.i].polarity && pred[x.j].polarity);
+    if(att.length) polAcc = att.filter(x => gold[x.i].polarity === pred[x.j].polarity).length / att.length;
+  }
+  return {nGold:gold.length, nPred:pred.length, nMatched:N, relaxed, exact, labelled, acc, kappa, polAcc};
+}
+function renderCompare(r, textMatches){
+  const out = $('#compareOut'); out.replaceChildren();
+  if(!textMatches) out.append(el('p', {class:'note', style:'color:var(--danger)'}, 'Warning: the text in the gold file differs from the current text, so offsets may not line up.'));
+  const f = x => isNaN(x) ? 'n/a' : x.toFixed(3);
+  const rows = [
+    ['Gold annotations', r.nGold], ['Current annotations', r.nPred], ['Overlapping pairs (one-to-one)', r.nMatched],
+    ['Span detection, overlap: precision', f(r.relaxed.P)], ['Span detection, overlap: recall', f(r.relaxed.R)], ['Span detection, overlap: F1', f(r.relaxed.F)],
+    ['Exact boundaries: F1', f(r.exact.F)], ['Overlap and same category: F1', f(r.labelled.F)],
+    ['Category agreement on matched pairs', f(r.acc)], ['Cohen\u2019s kappa on matched pairs', f(r.kappa)], ['Polarity agreement (Attitude pairs)', f(r.polAcc)]
+  ];
+  const t = el('table', {class:'res'});
+  rows.forEach(([k, v]) => t.append(el('tr', {}, el('td', {}, k), el('td', {}, String(v)))));
+  out.append(t);
+}
+
+/* ---------- Settings dialog ---------- */
+function openSettings(){
+  $('#setKey').value = settings.key; $('#setModel').value = settings.model; $('#setPrompt').value = settings.prompt;
+  $('#dlgSettings').showModal();
+}
+
+/* ---------- Wire up ---------- */
+function init(){
+  loadSettings(); settings.scope = Object.assign({att:true, eng:true, grad:true, engType:'both'}, settings.scope || {}); buildToolbar(); wireView(); wireScope();
+  $('#editor').value = state.text;
+  $('#tabEdit').onclick = () => setMode('edit');
+  $('#tabAnn').onclick = () => setMode('ann');
+  $('#btnAuto').onclick = runClaude;
+  $('#btnRules').onclick = runRules;
+  $('#btnOpen').onclick = () => $('#fileText').click();
+  $('#fileText').onchange = async e => {
+    const f = e.target.files[0]; if(!f) return;
+    if(state.anns.length && !confirm('Opening a new text removes the current annotations. Continue?')){ e.target.value = ''; return; }
+    loadText(await readFile(f)); e.target.value = ''; setMode('edit');
+  };
+  $('#btnImport').onclick = () => $('#fileJson').click();
+  $('#fileJson').onchange = async e => {
+    const f = e.target.files[0]; if(!f) return;
+    try{
+      const j = JSON.parse(await readFile(f));
+      if(typeof j.text !== 'string') throw new Error('No "text" field found.');
+      loadText(j.text);
+      state.anns = sanitize(j.annotations, state.text).map((a, i) => ({...a, id:i + 1}));
+      nextId = state.anns.length + 1; setMode('ann'); setStatus(`Imported ${state.anns.length} annotations.`);
+    }catch(err){ setStatus('Import failed: ' + err.message, true); }
+    e.target.value = '';
+  };
+  $('#btnExportJson').onclick = exportJson;
+  $('#btnExportCsv').onclick = exportCsv;
+  $('#btnSettings').onclick = openSettings;
+  $('#btnCancelSettings').onclick = () => $('#dlgSettings').close();
+  $('#btnResetPrompt').onclick = () => { $('#setPrompt').value = DEFAULT_PROMPT; };
+  $('#btnSaveSettings').onclick = () => {
+    settings.key = $('#setKey').value.trim(); settings.model = $('#setModel').value.trim() || 'claude-sonnet-4-6';
+    settings.prompt = $('#setPrompt').value.trim() || DEFAULT_PROMPT; saveSettings(); $('#dlgSettings').close();
+  };
+  $('#btnAcceptAll').onclick = () => { state.anns.forEach(a => { if(a.status === 'pending') a.status = 'accepted'; }); refresh(); };
+  $('#btnClearPending').onclick = () => { state.anns = state.anns.filter(a => a.status !== 'pending'); if(!byId(state.selected)) state.selected = null; refresh(); };
+  $('#btnCompare').onclick = () => { $('#compareOut').replaceChildren(); $('#fileGold').value = ''; $('#dlgCompare').showModal(); };
+  $('#btnCloseCompare').onclick = () => $('#dlgCompare').close();
+  $('#fileGold').onchange = async e => {
+    const f = e.target.files[0]; if(!f) return;
+    try{
+      const j = JSON.parse(await readFile(f));
+      const goldText = typeof j.text === 'string' ? j.text.replace(/\r\n/g, '\n') : state.text;
+      const gold = sanitize(j.annotations, goldText);
+      renderCompare(compare(gold, state.anns), goldText === state.text);
+    }catch(err){ $('#compareOut').replaceChildren(el('p', {class:'note', style:'color:var(--danger)'}, 'Could not read that file: ' + err.message)); }
+  };
+  document.addEventListener('keydown', e => {
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if(e.key === 'Escape'){ hideToolbar(); }
+    if((e.key === 'Delete') && state.selected != null && !/INPUT|TEXTAREA|SELECT/.test(tag)) deleteAnn(state.selected);
+  });
+  document.addEventListener('mousedown', e => { if(!e.target.closest('#toolbar') && !e.target.closest('#view')) hideToolbar(); });
+  // Start in annotate mode when a saved project exists
+  setMode(state.text ? 'ann' : 'edit');
+}
+init();
+</script>
+</body>
+</html>
